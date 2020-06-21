@@ -1,0 +1,9 @@
+<html>
+<head>
+<title>Phone Login</title>
+</head>
+<body>
+<h1>Welcome {{ request.user.phone_number }}</h1>
+<a href="{% url 'phone_login' %}">LOGIN</a>
+</body>
+</html>
