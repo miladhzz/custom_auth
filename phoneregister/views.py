@@ -7,6 +7,7 @@ from django.http import HttpResponseRedirect
 from .models import MyUser
 from django.contrib.auth import login
 from . import forms
+from . import helper
 
 
 def phone_login(request):
@@ -27,6 +28,7 @@ def signup(request):
         if form.is_valid():
             new_user = form.save(commit=False)
             otp = randint(10000, 99999)
+            print('otp:', otp)
             new_user.is_active = False
             new_user.otp = otp
             new_user.save()
@@ -45,7 +47,6 @@ def verify(request):
     user = MyUser.objects.get(phone_number=request.session.get('user_info'))
 
     if request.method == "POST":
-        print(request.POST.get('otp'))
         if user.otp == int(request.POST.get('otp')):
             user.is_active = True
             user.save()
@@ -56,4 +57,7 @@ def verify(request):
 
 @login_required
 def dashboard(request):
-    return render(request, 'dashboard.html')
+
+    if helper.check_otp_expiration(request.user.phone_number):
+        return render(request, 'dashboard.html')
+    return HttpResponseRedirect(reverse('phone_login'))

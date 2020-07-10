@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import PermissionsMixin
 
 from .usermanager import UserManager
+import datetime
 
 # Create your models here.
 
