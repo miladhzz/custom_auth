@@ -31,7 +31,6 @@ AUTHENTICATION_BACKENDS = [
    'django.contrib.auth.backends.ModelBackend',
    'phoneregister.backends.PhoneBackend',
 ]
-AUTH_USER_MODEL = 'phoneregister.MyUser'
 
 # Application definition
 
@@ -124,3 +123,5 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
 STATIC_URL = '/static/'
+
+AUTH_USER_MODEL = 'phoneregister.MyUser'
