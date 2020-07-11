@@ -1,63 +1,78 @@
-from random import randint
-
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 from django.urls import reverse
 from django.http import HttpResponseRedirect
 from .models import MyUser
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from . import forms
 from . import helper
-
-
-def phone_login(request):
-    if 'phone_number' in request.POST:
-        user = MyUser.objects.get(phone_number=request.POST.get('phone_number'))
-        login(request, user)
-        return HttpResponseRedirect(reverse('home'))
-    return render(request, 'phone_login.html')
-
-
-def home(request):
-    return render(request, 'home.html')
+from django.contrib import messages
 
 
 def signup(request):
-    if request.method == "POST":
-        form = forms.SignUpForm(request.POST)
-        if form.is_valid():
-            new_user = form.save(commit=False)
-            otp = randint(10000, 99999)
-            print('otp:', otp)
-            new_user.is_active = False
-            new_user.otp = otp
-            new_user.save()
-            request.session['user_info'] = new_user.phone_number
-            print(new_user.phone_number)
-            return HttpResponseRedirect(reverse('verify'))
+    form = forms.SignUpForm()
 
-    return render(request, 'signup.html')
+    if request.method == "POST":
+        try:
+            if "phone_number" in request.POST:
+                phone_number = request.POST.get('phone_number')
+                user = MyUser.objects.get(phone_number=phone_number)
+                otp = helper.get_random()
+                helper.send_otp(user.phone_number, otp)
+                user.otp = otp
+                user.save()
+                request.session['user_info'] = user.phone_number
+                return HttpResponseRedirect(reverse('verify'))
+
+        except MyUser.DoesNotExist:
+            form = forms.SignUpForm(request.POST)
+            if form.is_valid():
+                user = form.save(commit=False)
+                otp = helper.get_random()
+                helper.send_otp(user.phone_number, otp)
+                user.is_active = False
+                user.otp = otp
+                user.save()
+                request.session['user_info'] = user.phone_number
+                return HttpResponseRedirect(reverse('verify'))
+
+    return render(request, 'signup.html', {'form': form})
 
 
 def verify(request):
 
-    if request.session.get('user_info'):
-        print(request.session.get('user_info'))
+    try:
+        user = MyUser.objects.get(phone_number=request.session.get('user_info'))
 
-    user = MyUser.objects.get(phone_number=request.session.get('user_info'))
+        if request.method == "POST":
 
-    if request.method == "POST":
-        if user.otp == int(request.POST.get('otp')):
+            if not helper.check_otp_expiration(user.phone_number):
+                messages.error(request, 'OTP is expired, please try again.')
+                return HttpResponseRedirect(reverse('signup'))
+
+            if user.otp != int(request.POST.get('otp')):
+                messages.error(request, 'OTP is incorrect.')
+                return HttpResponseRedirect(reverse('verify'))
+
             user.is_active = True
             user.save()
+            login(request, user)
             return HttpResponseRedirect(reverse('dashboard'))
 
-    return render(request, 'verify.html', {'phone_number': user.phone_number})
+        return render(request, 'verify.html', {'phone_number': user.phone_number})
+
+    except MyUser.DoesNotExist:
+        messages.error(request, 'Error accorded, try again.')
+        return HttpResponseRedirect(reverse('signup'))
 
 
 @login_required
 def dashboard(request):
+    return render(request, 'dashboard.html')
 
-    if helper.check_otp_expiration(request.user.phone_number):
-        return render(request, 'dashboard.html')
-    return HttpResponseRedirect(reverse('phone_login'))
+
+@login_required
+def log_out(request):
+    logout(request)
+    return HttpResponseRedirect(reverse('signup'))
+

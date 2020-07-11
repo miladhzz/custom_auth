@@ -5,13 +5,20 @@
     <title>Verify</title>
 </head>
 <body>
+{% if messages %}
+<ul class="messages" style="color:red;">
+    {% for message in messages %}
+    <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+    {% endfor %}
+</ul>
+    <a href="{% url 'signup' %}">Change phone number</a>
+{% endif %}
 <form method="post" action=".">
     {% csrf_token %}
-    <label for="mobile">Mobile</label>
+    <label for="mobile">Mobile: </label>
     <input type="text" name="phone_number" id="mobile" disabled value="{{ phone_number }}"/>
-    <br />
-    <label for="otp">OTP</label>
-    <input type="number" id="otp" name="otp"/>
+    <label for="otp">OTP: </label>
+    <input type="number" id="otp" name="otp" required/>
     <button type="submit">Check OTP</button>
 </form>
 </body>
